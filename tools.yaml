@@ -1,0 +1,68 @@
+sources:
+  my-dsar-source:
+    kind: postgres
+    host: 127.0.0.1
+    port: 5432
+    database: sor_db
+    user: ${USER}
+    password: ${PASSWORD}
+
+tools:
+  get-active-sors:
+    kind: postgres-sql
+    source: my-dsar-source
+    description: Get all active Systems of Record (SORs) and their tables.
+    parameters: []
+    statement: >
+      SELECT DISTINCT sor_nm, table_nm FROM sor_data_catalogue WHERE isActive = true;
+
+  get-attributes-by-sor:
+    kind: postgres-sql
+    source: my-dsar-source
+    description: Get all attributes for a given SOR and table.
+    parameters:
+      - name: sor_name
+        type: string
+        description: The name of the source system.
+      - name: table_name
+        type: string
+        description: The name of the table in that SOR.
+    statement: >
+      SELECT attr_nm, is_sde_field, attr_format FROM sor_data_catalogue
+      WHERE sor_nm = $1 AND table_nm = $2;
+
+  get-join-predicates:
+    kind: postgres-sql
+    source: my-dsar-source
+    description: Retrieve joining predicates for a specific SOR and table.
+    parameters:
+      - name: sor_name
+        type: string
+        description: The source system name.
+      - name: table_name
+        type: string
+        description: The table to query join predicates from.
+    statement: >
+      SELECT joiningPredicate FROM sor_data_catalogue
+      WHERE sor_nm = $1 AND table_nm = $2 AND joiningPredicate IS NOT NULL;
+
+  get-filter-predicates:
+    kind: postgres-sql
+    source: my-dsar-source
+    description: Retrieve filter predicates for a specific SOR and table.
+    parameters:
+      - name: sor_name
+        type: string
+        description: The source system name.
+      - name: table_name
+        type: string
+        description: The table to query filter predicates from.
+    statement: >
+      SELECT filterPredicate FROM sor_data_catalogue
+      WHERE sor_nm = $1 AND table_nm = $2 AND filterPredicate IS NOT NULL;
+toolsets:
+  my-toolset:
+      - get-active-sors
+      - get-attributes-by-sor
+      - get-join-predicates
+      - get-filter-predicates
