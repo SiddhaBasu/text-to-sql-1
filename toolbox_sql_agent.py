@@ -4,11 +4,17 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.genai import types
 from toolbox_core import ToolboxSyncClient
+from dotenv import load_dotenv
 
 import os
+import asyncio
 
-def run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key, toolset_name="my-toolset"):
-    # Set your Google API key
+load_dotenv()
+
+async def run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key=None, toolset_name="my-toolset"):
+    # Set your Google API key from .env if not provided
+    if gemini_api_key is None:
+        gemini_api_key = os.getenv('GOOGLE_API_KEY')
     os.environ['GOOGLE_API_KEY'] = gemini_api_key
 
     # Connect to Toolbox
@@ -20,7 +26,7 @@ def run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key, toolset_na
         """
 
         root_agent = Agent(
-            model='gemini-2.0-pro',  # or 'gemini-2.0-flash-001'
+            model='gemini-2.0-flash-001',  # or 'gemini-2.0-flash-001'
             name='dsar_agent',
             description='A text-to-SQL assistant for SOR data retrieval.',
             instruction=prompt,
@@ -29,7 +35,7 @@ def run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key, toolset_na
 
         session_service = InMemorySessionService()
         artifacts_service = InMemoryArtifactService()
-        session = session_service.create_session(
+        session = await session_service.create_session(
             state={}, app_name='dsar_agent', user_id='123'
         )
         runner = Runner(
@@ -55,9 +61,8 @@ def run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key, toolset_na
 if __name__ == "__main__":
     # Example usage
     toolbox_url = "http://127.0.0.1:5000"
-    gemini_api_key = "XXX"  # Replace with your actual key or load from config
     user_question = "Generate a BigQuery SQL query to retrieve all data on a customer with CM15 of 1234567890 in SORs C360, Adobe"
-    responses = run_toolbox_sql_agent(user_question, toolbox_url, gemini_api_key)
+    responses = asyncio.run(run_toolbox_sql_agent(user_question, toolbox_url))
     print("RESPONSES:")
     for text in responses:
-        print(text) 
+        print(text)
